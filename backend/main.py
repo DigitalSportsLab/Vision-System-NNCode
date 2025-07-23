@@ -11,6 +11,11 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 import requests
 import os
+import json
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 from fastapi import FastAPI, File, HTTPException, UploadFile, Response, Body, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -55,9 +60,19 @@ app = FastAPI()
 Instrumentator().instrument(app).expose(app)
 
 # Allow CORS for React frontend
+# Get CORS origins from environment variable
+cors_origins = os.getenv("CORS_ORIGINS", '["*"]')
+try:
+    # Parse the JSON string to get the list of origins
+    allowed_origins = json.loads(cors_origins)
+except json.JSONDecodeError:
+    # Fallback to allowing all origins if parsing fails
+    allowed_origins = ["*"]
+    app_logger.warning("Failed to parse CORS_ORIGINS, falling back to allow all origins")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this for production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

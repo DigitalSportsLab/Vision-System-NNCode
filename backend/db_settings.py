@@ -5,9 +5,16 @@ from sqlalchemy.orm import sessionmaker
 from .models import Base
 from sqlalchemy.sql import text
 import os
+from dotenv import load_dotenv
 
-# Get database URL from environment variable, with a default fallback
-DATABASE_URL = "postgresql://user:password@localhost:5433/detection_db"
+# Load environment variables from .env file
+load_dotenv()
+
+# Get database URL from environment variable
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    f"postgresql://{os.getenv('POSTGRES_USER', 'user')}:{os.getenv('POSTGRES_PASSWORD', 'password')}@{os.getenv('POSTGRES_HOST', 'localhost')}:{os.getenv('POSTGRES_PORT', '5433')}/{os.getenv('POSTGRES_DB', 'detection_db')}"
+)
 
 # Create an engine for the PostgreSQL server
 engine = create_engine(DATABASE_URL)
@@ -18,7 +25,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def create_database():
     """Create the database if it doesn't exist."""
     # Connect to default 'postgres' database to create a new database
-    default_engine = create_engine("postgresql://user:password@localhost:5433/postgres")  # Changed from db:5432 to localhost:5433
+    # Connect to default 'postgres' database to create a new database
+    postgres_url = f"postgresql://{os.getenv('POSTGRES_USER', 'user')}:{os.getenv('POSTGRES_PASSWORD', 'password')}@{os.getenv('POSTGRES_HOST', 'localhost')}:{os.getenv('POSTGRES_PORT', '5433')}/postgres"
+    default_engine = create_engine(postgres_url)
     
     # Use a connection context that auto-commits
     with default_engine.connect() as conn:
