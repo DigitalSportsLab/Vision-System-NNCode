@@ -20,11 +20,7 @@ const Layout = ({ children, toggleTheme }) => {
           height: '100vh',
           overflow: 'auto',
           position: 'relative',
-          p: { xs: 2, sm: 3, md: 4 },
-          backgroundColor: (theme) =>
-            theme.palette.mode === 'light'
-              ? theme.palette.grey[50]
-              : theme.palette.background.default,
+          backgroundColor: 'transparent',
         }}
       >
         {children}

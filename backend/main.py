@@ -738,6 +738,166 @@ async def get_camera_threads():
         "camera_threads": list(app.camera_threads_info.values())
     })
 
+@app.get("/api/detection-stats/real-time")
+async def get_real_time_stats():
+    """Get real-time detection statistics for the last hour"""
+    db = SessionLocal()
+    try:
+        one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+        
+        # Get detection rate per minute for the last hour
+        minute_stats = db.query(
+            func.date_trunc('minute', DetectionEvent.timestamp).label('minute'),
+            func.count(DetectionEvent.id).label('count')
+        ).filter(
+            DetectionEvent.timestamp >= one_hour_ago
+        ).group_by(
+            func.date_trunc('minute', DetectionEvent.timestamp)
+        ).order_by(
+            func.date_trunc('minute', DetectionEvent.timestamp).desc()
+        ).limit(60).all()
+        
+        # Get current active cameras
+        active_cameras = len(getattr(app, 'camera_threads_info', {}))
+        
+        # Get latest detections
+        latest_detections = db.query(DetectionEvent).order_by(
+            DetectionEvent.timestamp.desc()
+        ).limit(10).all()
+        
+        return {
+            "detectionRate": [{"time": stat.minute.isoformat(), "count": stat.count} for stat in minute_stats],
+            "activeCameras": active_cameras,
+            "latestDetections": [{
+                "id": d.id,
+                "model_type": d.model_type,
+                "class_name": d.class_name,
+                "camera_name": d.camera_name,
+                "timestamp": d.timestamp.isoformat()
+            } for d in latest_detections]
+        }
+    finally:
+        db.close()
+
+@app.get("/api/detection-stats/top-classes")
+async def get_top_classes(limit: int = 10, days: int = 7):
+    """Get top detected classes over a specified period"""
+    db = SessionLocal()
+    try:
+        since_date = datetime.utcnow() - timedelta(days=days)
+        
+        top_classes = db.query(
+            DetectionEvent.class_name,
+            func.count(DetectionEvent.id).label('count')
+        ).filter(
+            DetectionEvent.timestamp >= since_date,
+            DetectionEvent.class_name.isnot(None)
+        ).group_by(
+            DetectionEvent.class_name
+        ).order_by(
+            func.count(DetectionEvent.id).desc()
+        ).limit(limit).all()
+        
+        return [{
+            "class_name": class_name,
+            "count": count,
+            "percentage": 0  # Will be calculated in frontend
+        } for class_name, count in top_classes]
+    finally:
+        db.close()
+
+@app.get("/api/detection-stats/camera-performance")
+async def get_camera_performance():
+    """Get detection statistics per camera"""
+    db = SessionLocal()
+    try:
+        # Get all cameras
+        cameras = db.query(Camera).all()
+        
+        camera_stats = []
+        for camera in cameras:
+            # Get detection count for this camera
+            detection_count = db.query(func.count(DetectionEvent.id)).filter(
+                DetectionEvent.camera_id == camera.id
+            ).scalar()
+            
+            # Get last detection time
+            last_detection = db.query(DetectionEvent.timestamp).filter(
+                DetectionEvent.camera_id == camera.id
+            ).order_by(DetectionEvent.timestamp.desc()).first()
+            
+            # Check if camera is active
+            is_active = camera.id in getattr(app, 'camera_threads_info', {})
+            
+            camera_stats.append({
+                "id": camera.id,
+                "name": camera.source_name,
+                "location": camera.location,
+                "detectionCount": detection_count,
+                "lastDetection": last_detection[0].isoformat() if last_detection else None,
+                "isActive": is_active,
+                "uptime": "N/A"  # Could be calculated from thread info
+            })
+        
+        return camera_stats
+    finally:
+        db.close()
+
+@app.get("/api/detection-stats/hourly-pattern")
+async def get_hourly_pattern(days: int = 30):
+    """Get average detection patterns by hour of day"""
+    db = SessionLocal()
+    try:
+        since_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Get average detections by hour
+        hourly_avg = db.query(
+            func.extract('hour', DetectionEvent.timestamp).label('hour'),
+            func.count(DetectionEvent.id).label('total_count')
+        ).filter(
+            DetectionEvent.timestamp >= since_date
+        ).group_by(
+            func.extract('hour', DetectionEvent.timestamp)
+        ).order_by(
+            func.extract('hour', DetectionEvent.timestamp)
+        ).all()
+        
+        # Calculate average per hour
+        hourly_pattern = []
+        for hour, total_count in hourly_avg:
+            avg_count = total_count / days  # Average per day for this hour
+            hourly_pattern.append({
+                "hour": int(hour),
+                "avgCount": round(avg_count, 2)
+            })
+        
+        return hourly_pattern
+    finally:
+        db.close()
+
+@app.get("/api/detections")
+async def get_detections(limit: int = 100, offset: int = 0, camera_id: Optional[int] = None):
+    """Get detection history with pagination"""
+    db = SessionLocal()
+    try:
+        query = db.query(DetectionEvent).order_by(DetectionEvent.timestamp.desc())
+        
+        if camera_id:
+            query = query.filter(DetectionEvent.camera_id == camera_id)
+        
+        detections = query.offset(offset).limit(limit).all()
+        
+        return [{
+            "id": d.id,
+            "timestamp": d.timestamp.isoformat(),
+            "class_name": d.class_name,
+            "camera_id": d.camera_id,
+            "camera_name": d.camera_name,
+            "model_type": d.model_type
+        } for d in detections]
+    finally:
+        db.close()
+
 # Add these new endpoints for individual camera control
 
 @app.post("/start_camera_stream/{camera_id}")
