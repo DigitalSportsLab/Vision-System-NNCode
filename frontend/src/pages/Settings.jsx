@@ -6,7 +6,6 @@ import {
   Button,
   Paper,
   Grid,
-  Collapse,
   Table,
   TableBody,
   TableCell,
@@ -25,16 +24,16 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Fade,
   Alert,
   Snackbar,
   Tooltip,
   InputAdornment,
-  Divider,
   Container,
   Tab,
   Tabs,
-  Avatar
+  Avatar,
+  alpha,
+  useTheme
 } from '@mui/material';
 import { 
   Delete, 
@@ -49,37 +48,30 @@ import {
   CameraAlt,
   Security,
   Notifications,
-  Storage
+  Storage,
+  Circle
 } from '@mui/icons-material';
+import { Camera, Shield, Bell, Database, Plus, MapPin, Pencil, Trash } from '@phosphor-icons/react';
 import { styled } from '@mui/material/styles';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 
 // Styled components
-const StyledCard = styled(Card)(({ theme }) => ({
-  borderRadius: 16,
-  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
-  boxShadow: theme.palette.mode === 'dark' 
-    ? '0 4px 24px rgba(0, 0, 0, 0.4)' 
-    : '0 4px 24px rgba(0, 0, 0, 0.06)',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.palette.mode === 'dark' 
-      ? '0 8px 32px rgba(0, 0, 0, 0.5)' 
-      : '0 8px 32px rgba(0, 0, 0, 0.08)',
-  },
-}));
-
 const CameraCard = styled(Card)(({ theme }) => ({
   borderRadius: 12,
-  transition: 'all 0.2s ease',
+  background: theme.palette.mode === 'dark' 
+    ? alpha(theme.palette.background.paper, 0.05)
+    : 'rgba(255, 255, 255, 0.95)',
+  backdropFilter: 'blur(10px)',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   cursor: 'pointer',
-  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
+  border: `1px solid ${alpha(theme.palette.divider, theme.palette.mode === 'dark' ? 0.08 : 0.12)}`,
   '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.shadows[4],
-    borderColor: theme.palette.primary.main,
+    transform: 'translateY(-4px)',
+    boxShadow: theme.palette.mode === 'dark'
+      ? '0 12px 24px rgba(6, 182, 212, 0.2)'
+      : '0 12px 24px rgba(6, 182, 212, 0.15)',
+    borderColor: alpha(theme.palette.primary.main, 0.3),
   },
 }));
 
@@ -92,7 +84,7 @@ const TabPanel = ({ children, value, index, ...other }) => {
       {...other}
     >
       {value === index && (
-        <Box sx={{ py: 3 }}>
+        <Box sx={{ py: 4 }}>
           {children}
         </Box>
       )}
@@ -101,6 +93,8 @@ const TabPanel = ({ children, value, index, ...other }) => {
 };
 
 const Settings = () => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [showCameraDialog, setShowCameraDialog] = useState(false);
   const [cameras, setCameras] = useState([]);
   const [editingCamera, setEditingCamera] = useState(null);
@@ -123,7 +117,7 @@ const Settings = () => {
       setCameras(response.data);
     } catch (error) {
       console.error('Error fetching cameras:', error);
-      alert('Error fetching cameras');
+      showSnackbar('Error fetching cameras', 'error');
     }
   };
 
@@ -167,11 +161,9 @@ const Settings = () => {
     e.preventDefault();
     try {
       if (editingCamera) {
-        // Update existing camera
         await axios.put(`http://localhost:8000/api/cameras/${editingCamera.id}`, cameraData);
         showSnackbar('Camera updated successfully');
       } else {
-        // Create new camera
         await axios.post('http://localhost:8000/api/create_camera', cameraData);
         showSnackbar('Camera added successfully');
       }
@@ -201,14 +193,17 @@ const Settings = () => {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 4 }}>
+    <Box>
+      {/* Header */}
+      <Container maxWidth="xl" sx={{ pt: 4, pb: 2 }}>
         <Typography 
           variant="h3" 
           gutterBottom 
           sx={{ 
             fontWeight: 800,
-            background: 'linear-gradient(45deg, #6366F1 30%, #8B5CF6 90%)',
+            background: isDark
+              ? 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)'
+              : 'linear-gradient(135deg, #0891b2 0%, #2563eb 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}
@@ -218,180 +213,297 @@ const Settings = () => {
         <Typography variant="body1" color="text.secondary">
           Manage your cameras and system preferences
         </Typography>
+      </Container>
+
+      {/* Tabs */}
+      <Box sx={{ 
+        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+        background: isDark
+          ? 'rgba(255, 255, 255, 0.01)'
+          : 'rgba(255, 255, 255, 0.4)',
+        backdropFilter: 'blur(20px)',
+      }}>
+        <Container maxWidth="xl">
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange}
+            sx={{ 
+              '& .MuiTab-root': {
+                color: theme.palette.text.secondary,
+                py: 3,
+                fontWeight: 500,
+                fontSize: '0.95rem',
+                textTransform: 'none',
+                transition: 'all 0.3s ease',
+                '&.Mui-selected': {
+                  color: '#06b6d4',
+                  fontWeight: 600,
+                },
+                '&:hover': {
+                  color: '#06b6d4',
+                  backgroundColor: alpha('#06b6d4', 0.08),
+                },
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#06b6d4',
+                height: 3,
+                borderRadius: '3px 3px 0 0',
+              },
+            }}
+          >
+            <Tab icon={<Camera size={20} />} label="Cameras" iconPosition="start" />
+            <Tab icon={<Shield size={20} />} label="Security" iconPosition="start" />
+            <Tab icon={<Bell size={20} />} label="Notifications" iconPosition="start" />
+            <Tab icon={<Database size={20} />} label="Storage" iconPosition="start" />
+          </Tabs>
+        </Container>
       </Box>
 
-      <Paper sx={{ borderRadius: 3, overflow: 'hidden' }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange}
-          sx={{ 
-            borderBottom: 1, 
-            borderColor: 'divider',
-            px: 2,
-            bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)'
-          }}
-        >
-          <Tab icon={<CameraAlt />} label="Cameras" iconPosition="start" />
-          <Tab icon={<Security />} label="Security" iconPosition="start" />
-          <Tab icon={<Notifications />} label="Notifications" iconPosition="start" />
-          <Tab icon={<Storage />} label="Storage" iconPosition="start" />
-        </Tabs>
-
-        <Box sx={{ p: 3 }}>
-          <TabPanel value={tabValue} index={0}>
-            {/* Camera Management Tab */}
-            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h5" fontWeight={600}>
+      {/* Content */}
+      <Container maxWidth="xl">
+        <TabPanel value={tabValue} index={0}>
+          {/* Camera Management Tab */}
+          <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="h4" fontWeight={700} gutterBottom>
                 Camera Management
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => handleOpenDialog()}
-                sx={{ 
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  px: 3,
-                  background: 'linear-gradient(45deg, #6366F1 30%, #8B5CF6 90%)',
-                  boxShadow: '0 3px 15px rgba(99, 102, 241, 0.3)',
-                  '&:hover': {
-                    boxShadow: '0 5px 20px rgba(99, 102, 241, 0.4)',
-                  }
-                }}
-              >
-                Add New Camera
-              </Button>
+              <Typography variant="body1" color="text.secondary">
+                Add and manage your security cameras
+              </Typography>
             </Box>
+            <Button
+              variant="contained"
+              startIcon={<Plus />}
+              onClick={() => handleOpenDialog()}
+              sx={{ 
+                borderRadius: 2,
+                textTransform: 'none',
+                px: 4,
+                py: 1.5,
+                background: isDark
+                  ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
+                  : 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                boxShadow: isDark
+                  ? '0 8px 32px rgba(6, 182, 212, 0.4)'
+                  : '0 8px 32px rgba(14, 165, 233, 0.3)',
+                '&:hover': {
+                  background: isDark
+                    ? 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)'
+                    : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  boxShadow: isDark
+                    ? '0 12px 40px rgba(6, 182, 212, 0.5)'
+                    : '0 12px 40px rgba(14, 165, 233, 0.4)',
+                },
+              }}
+            >
+              Add New Camera
+            </Button>
+          </Box>
 
-            {/* Camera Grid */}
-            <Grid container spacing={3}>
-              {cameras.map((camera) => (
-                <Grid item xs={12} sm={6} md={4} key={camera.id}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <CameraCard>
-                      <CardContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
-                              <Videocam />
-                            </Avatar>
-                            <Box>
-                              <Typography variant="h6" fontWeight={600}>
-                                {camera.source_name}
-                              </Typography>
-                              <Chip 
-                                label={camera.stream_type} 
-                                size="small" 
-                                color={camera.stream_type === 'live' ? 'success' : 'info'}
-                                sx={{ mt: 0.5 }}
-                              />
-                            </Box>
-                          </Box>
-                          <Box>
-                            <Tooltip title="Edit">
-                              <IconButton size="small" onClick={() => handleOpenDialog(camera)}>
-                                <Edit fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <IconButton size="small" color="error" onClick={() => handleDeleteCamera(camera.id)}>
-                                <Delete fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </Box>
-                        
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
-                            <Typography variant="body2" color="text.secondary">
-                              {camera.location || 'No location set'}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Info sx={{ fontSize: 16, color: 'text.secondary' }} />
-                            <Typography variant="body2" color="text.secondary" noWrap>
-                              {camera.stream}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </CardContent>
-                    </CameraCard>
-                  </motion.div>
-                </Grid>
-              ))}
-              
-              {/* Add Camera Card */}
-              <Grid item xs={12} sm={6} md={4}>
+          {/* Camera Grid */}
+          <Grid container spacing={3}>
+            {cameras.map((camera) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={camera.id}>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: cameras.length * 0.1 }}
+                  transition={{ duration: 0.3 }}
                 >
-                  <Card 
-                    sx={{ 
-                      borderRadius: 3,
-                      border: '2px dashed',
-                      borderColor: 'divider',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      height: '100%',
-                      minHeight: 180,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      '&:hover': {
-                        borderColor: 'primary.main',
-                        bgcolor: 'action.hover',
-                      }
-                    }}
-                    onClick={() => handleOpenDialog()}
-                  >
-                    <CardContent sx={{ textAlign: 'center' }}>
-                      <Add sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-                      <Typography variant="body1" color="text.secondary">
-                        Add New Camera
-                      </Typography>
+                  <CameraCard>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar sx={{ 
+                            bgcolor: alpha('#06b6d4', 0.1), 
+                            width: 44, 
+                            height: 44,
+                            border: `2px solid ${alpha('#06b6d4', 0.2)}`,
+                          }}>
+                            <Camera size={24} color="#06b6d4" weight="duotone" />
+                          </Avatar>
+                          <Box>
+                            <Typography variant="h6" fontWeight={600}>
+                              {camera.source_name}
+                            </Typography>
+                            <Chip 
+                              icon={<Circle sx={{ fontSize: 8 }} />}
+                              label={camera.stream_type} 
+                              size="small" 
+                              sx={{ 
+                                mt: 0.5,
+                                bgcolor: camera.stream_type === 'live' 
+                                  ? alpha(theme.palette.success.main, 0.1)
+                                  : alpha(theme.palette.info.main, 0.1),
+                                color: camera.stream_type === 'live' 
+                                  ? theme.palette.success.main
+                                  : theme.palette.info.main,
+                                border: `1px solid ${camera.stream_type === 'live' 
+                                  ? alpha(theme.palette.success.main, 0.3)
+                                  : alpha(theme.palette.info.main, 0.3)}`,
+                                '& .MuiChip-icon': {
+                                  color: 'inherit',
+                                },
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                        <Box>
+                          <Tooltip title="Edit">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleOpenDialog(camera)}
+                              sx={{ 
+                                color: theme.palette.primary.main,
+                                '&:hover': {
+                                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                },
+                              }}
+                            >
+                              <Pencil size={18} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleDeleteCamera(camera.id)}
+                              sx={{ 
+                                color: theme.palette.error.main,
+                                '&:hover': {
+                                  bgcolor: alpha(theme.palette.error.main, 0.1),
+                                },
+                              }}
+                            >
+                              <Trash size={18} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <MapPin size={16} color={theme.palette.text.secondary} />
+                          <Typography variant="body2" color="text.secondary">
+                            {camera.location || 'No location set'}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Info sx={{ fontSize: 16, color: 'text.secondary' }} />
+                          <Typography variant="body2" color="text.secondary" noWrap>
+                            {camera.stream}
+                          </Typography>
+                        </Box>
+                      </Box>
                     </CardContent>
-                  </Card>
+                  </CameraCard>
                 </motion.div>
               </Grid>
+            ))}
+            
+            {/* Add Camera Card */}
+            <Grid item xs={12} sm={6} md={4} lg={3}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: cameras.length * 0.1 }}
+              >
+                <CameraCard 
+                  sx={{ 
+                    border: `2px dashed ${alpha(theme.palette.primary.main, 0.3)}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: 180,
+                    background: isDark
+                      ? alpha(theme.palette.primary.main, 0.02)
+                      : alpha(theme.palette.primary.main, 0.03),
+                    '&:hover': {
+                      borderColor: theme.palette.primary.main,
+                      background: isDark
+                        ? alpha(theme.palette.primary.main, 0.05)
+                        : alpha(theme.palette.primary.main, 0.08),
+                    }
+                  }}
+                  onClick={() => handleOpenDialog()}
+                >
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <Plus size={48} color={theme.palette.primary.main} weight="light" />
+                    <Typography variant="body1" color="primary" sx={{ mt: 1, fontWeight: 500 }}>
+                      Add New Camera
+                    </Typography>
+                  </CardContent>
+                </CameraCard>
+              </motion.div>
             </Grid>
+          </Grid>
+        </TabPanel>
 
-          </TabPanel>
-
-          <TabPanel value={tabValue} index={1}>
-            <Typography variant="h5" fontWeight={600} gutterBottom>
+        <TabPanel value={tabValue} index={1}>
+          <Box sx={{ maxWidth: 'md' }}>
+            <Typography variant="h4" fontWeight={700} gutterBottom>
               Security Settings
             </Typography>
-            <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              Configure security and access control settings
+            </Typography>
+            <Alert 
+              severity="info" 
+              sx={{ 
+                bgcolor: isDark 
+                  ? alpha(theme.palette.info.main, 0.1)
+                  : alpha(theme.palette.info.main, 0.08),
+                border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+              }}
+            >
               Security settings will be available in a future update.
             </Alert>
-          </TabPanel>
+          </Box>
+        </TabPanel>
 
-          <TabPanel value={tabValue} index={2}>
-            <Typography variant="h5" fontWeight={600} gutterBottom>
+        <TabPanel value={tabValue} index={2}>
+          <Box sx={{ maxWidth: 'md' }}>
+            <Typography variant="h4" fontWeight={700} gutterBottom>
               Notification Preferences
             </Typography>
-            <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              Manage alerts and notification settings
+            </Typography>
+            <Alert 
+              severity="info" 
+              sx={{ 
+                bgcolor: isDark 
+                  ? alpha(theme.palette.info.main, 0.1)
+                  : alpha(theme.palette.info.main, 0.08),
+                border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+              }}
+            >
               Notification settings will be available in a future update.
             </Alert>
-          </TabPanel>
+          </Box>
+        </TabPanel>
 
-          <TabPanel value={tabValue} index={3}>
-            <Typography variant="h5" fontWeight={600} gutterBottom>
+        <TabPanel value={tabValue} index={3}>
+          <Box sx={{ maxWidth: 'md' }}>
+            <Typography variant="h4" fontWeight={700} gutterBottom>
               Storage Management
             </Typography>
-            <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              Manage recording storage and retention
+            </Typography>
+            <Alert 
+              severity="info" 
+              sx={{ 
+                bgcolor: isDark 
+                  ? alpha(theme.palette.info.main, 0.1)
+                  : alpha(theme.palette.info.main, 0.08),
+                border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+              }}
+            >
               Storage settings will be available in a future update.
             </Alert>
-          </TabPanel>
-        </Box>
-      </Paper>
+          </Box>
+        </TabPanel>
+      </Container>
 
       {/* Camera Dialog */}
       <Dialog 
@@ -400,12 +512,18 @@ const Settings = () => {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 3 }
+          sx: { 
+            borderRadius: 3,
+            background: isDark 
+              ? alpha(theme.palette.background.paper, 0.9)
+              : 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(20px)',
+          }
         }}
       >
         <DialogTitle sx={{ pb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Videocam color="primary" />
+            <Camera size={24} color="#06b6d4" weight="duotone" />
             <Typography variant="h6">
               {editingCamera ? 'Edit Camera' : 'Add New Camera'}
             </Typography>
@@ -425,7 +543,7 @@ const Settings = () => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <CameraAlt />
+                        <Camera size={20} weight="duotone" />
                       </InputAdornment>
                     ),
                   }}
@@ -467,7 +585,7 @@ const Settings = () => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <LocationOn />
+                        <MapPin size={20} />
                       </InputAdornment>
                     ),
                   }}
@@ -484,8 +602,10 @@ const Settings = () => {
               variant="contained" 
               startIcon={<Check />}
               sx={{ 
-                background: 'linear-gradient(45deg, #6366F1 30%, #8B5CF6 90%)',
-                boxShadow: '0 3px 15px rgba(99, 102, 241, 0.3)',
+                background: isDark
+                  ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
+                  : 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                boxShadow: '0 4px 20px rgba(6, 182, 212, 0.3)',
               }}
             >
               {editingCamera ? 'Update' : 'Add'} Camera
@@ -509,7 +629,7 @@ const Settings = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Container>
+    </Box>
   );
 };
 

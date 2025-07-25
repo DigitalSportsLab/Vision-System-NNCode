@@ -26,7 +26,7 @@ import {
     Switch,
     FormGroup
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { styled, alpha, useTheme } from '@mui/material/styles';
 import { 
     PlayArrow, 
     Stop, 
@@ -37,12 +37,15 @@ import {
     Speed,
     CheckCircle
 } from '@mui/icons-material';
+import { Camera, Play, Pause, Eye, User, Scan } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Styled components
 const StyledContainer = styled(Container)(({ theme }) => ({
     paddingTop: theme.spacing(4),
     paddingBottom: theme.spacing(4),
+    position: 'relative',
+    zIndex: 1,
 }));
 
 const VideoContainer = styled(Paper)(({ theme }) => ({
@@ -54,12 +57,20 @@ const VideoContainer = styled(Paper)(({ theme }) => ({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    borderRadius: theme.spacing(2),
-    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-    backdropFilter: 'blur(8px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-    padding: theme.spacing(2),
+    borderRadius: theme.spacing(3),
+    background: theme.palette.mode === 'dark'
+        ? alpha(theme.palette.background.paper, 0.03)
+        : 'rgba(255, 255, 255, 0.7)',
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${alpha(theme.palette.divider, theme.palette.mode === 'dark' ? 0.08 : 0.12)}`,
+    boxShadow: 'none',
+    padding: 0,
+    position: 'relative',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    '&:hover': {
+        borderColor: alpha('#06b6d4', 0.3),
+        boxShadow: `0 8px 32px ${alpha('#06b6d4', 0.1)}`,
+    },
 }));
 
 const ControlButton = styled(Button)(({ theme }) => ({
@@ -69,22 +80,41 @@ const ControlButton = styled(Button)(({ theme }) => ({
 }));
 
 
-// Simplified NeonButton styled component
-const NeonButton = styled(Button)(({ theme }) => ({
-    borderRadius: '50px',
-    padding: '8px 24px',
-    backgroundColor: '#1976d2',
+// Modern button styled component
+const ModernButton = styled(Button)(({ theme, variant }) => ({
+    borderRadius: '8px',
+    padding: '10px 28px',
+    textTransform: 'none',
+    fontWeight: 600,
+    fontSize: '0.95rem',
+    background: variant === 'stop' 
+        ? theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+            : 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)'
+        : theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
+            : 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
     color: 'white',
-    boxShadow: '0 4px 14px rgba(25, 118, 210, 0.3)',
-    transition: 'all 0.2s ease-in-out',
+    boxShadow: variant === 'stop'
+        ? '0 4px 20px rgba(239, 68, 68, 0.3)'
+        : '0 4px 20px rgba(6, 182, 212, 0.3)',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     '&:hover': {
-        backgroundColor: '#1565c0',
-        boxShadow: '0 6px 20px rgba(25, 118, 210, 0.4)',
-        transform: 'translateY(-1px)'
+        background: variant === 'stop'
+            ? theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
+                : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+            : theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)'
+                : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+        boxShadow: variant === 'stop'
+            ? '0 6px 24px rgba(239, 68, 68, 0.4)'
+            : '0 6px 24px rgba(6, 182, 212, 0.4)',
+        transform: 'translateY(-2px)'
     },
     '&:disabled': {
-        backgroundColor: '#bdbdbd',
-        color: '#757575',
+        background: alpha(theme.palette.action.disabled, 0.12),
+        color: theme.palette.action.disabled,
         boxShadow: 'none'
     }
 }));
@@ -92,65 +122,76 @@ const NeonButton = styled(Button)(({ theme }) => ({
 // Model selection button component
 const ModelButton = styled(Button)(({ theme, selected, modelColor }) => ({
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    border: 'none',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    border: selected ? 'none' : `2px solid ${alpha(theme.palette.divider, 0.2)}`,
     borderRadius: '12px',
-    padding: '12px 24px',
-    minWidth: '120px',
-    backgroundColor: selected 
-        ? theme.palette.mode === 'dark' 
-            ? modelColor 
-            : modelColor
+    padding: '14px 28px',
+    minWidth: '140px',
+    background: selected 
+        ? `linear-gradient(135deg, ${modelColor} 0%, ${alpha(modelColor, 0.8)} 100%)`
         : theme.palette.mode === 'dark' 
-            ? 'rgba(255, 255, 255, 0.05)' 
-            : 'rgba(0, 0, 0, 0.04)',
+            ? alpha(theme.palette.background.paper, 0.05)
+            : 'rgba(255, 255, 255, 0.8)',
     color: selected 
         ? 'white' 
         : theme.palette.text.primary,
     boxShadow: selected 
-        ? theme.palette.mode === 'dark'
-            ? `0 0 20px ${modelColor}40, 0 4px 12px rgba(0, 0, 0, 0.3)`
-            : `0 4px 20px ${modelColor}40`
+        ? `0 8px 32px ${alpha(modelColor, 0.4)}`
         : 'none',
     '&:hover': {
-        transform: 'translateY(-1px)',
-        backgroundColor: selected 
-            ? theme.palette.mode === 'dark'
-                ? modelColor
-                : modelColor
+        transform: 'translateY(-2px)',
+        background: selected 
+            ? `linear-gradient(135deg, ${alpha(modelColor, 0.9)} 0%, ${alpha(modelColor, 0.7)} 100%)`
             : theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.08)' 
-                : 'rgba(0, 0, 0, 0.08)',
+                ? alpha(modelColor, 0.1)
+                : alpha(modelColor, 0.08),
+        borderColor: selected ? 'transparent' : alpha(modelColor, 0.3),
         boxShadow: selected 
-            ? theme.palette.mode === 'dark'
-                ? `0 0 30px ${modelColor}60, 0 6px 16px rgba(0, 0, 0, 0.4)`
-                : `0 6px 24px ${modelColor}50`
-            : '0 2px 8px rgba(0, 0, 0, 0.1)',
+            ? `0 12px 40px ${alpha(modelColor, 0.5)}`
+            : `0 4px 20px ${alpha(modelColor, 0.15)}`,
     },
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '4px',
+    gap: '8px',
     textTransform: 'none',
-    fontWeight: 500,
+    fontWeight: 600,
+    position: 'relative',
+    overflow: 'hidden',
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: selected
+            ? 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)'
+            : 'none',
+        transform: 'translateX(-100%)',
+        transition: 'transform 0.6s',
+    },
+    '&:hover::before': {
+        transform: 'translateX(100%)',
+    },
 }));
 
 // Model info data
 const modelInfo = {
     objectDetection: {
         title: "Detection",
-        icon: <CropFree sx={{ fontSize: 24 }} />,
-        color: '#6366F1', // Modern purple/indigo
+        icon: <Scan size={24} weight="duotone" />,
+        color: '#06b6d4', // Cyan theme
     },
     segmentation: {
         title: "Segmentation",
-        icon: <Visibility sx={{ fontSize: 24 }} />,
-        color: '#10B981', // Modern emerald green
+        icon: <Eye size={24} weight="duotone" />,
+        color: '#10b981', // Emerald
     },
     pose: {
         title: "Pose",
-        icon: <PersonPin sx={{ fontSize: 24 }} />,
-        color: '#F59E0B', // Modern amber/orange
+        icon: <User size={24} weight="duotone" />,
+        color: '#f59e0b', // Amber
     }
 };
 
@@ -164,6 +205,8 @@ const SplitViewContainer = styled(Box)(({ theme }) => ({
 
 // Main component
 const LiveAnalysis = () => {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const [cameras, setCameras] = useState([]);
     const [selectedModel, setSelectedModel] = useState('objectDetection');
     
@@ -352,25 +395,28 @@ const LiveAnalysis = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <Typography 
-                    variant="h3" 
-                    align="center" 
-                    gutterBottom 
-                    sx={{ 
-                        color: '#1976d2',
-                        mb: 4,
-                        fontWeight: 600,
-                        background: 'linear-gradient(45deg, #1976d2 30%, #21CBF3 90%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                    }}
-                >
-                    Live Analysis Studio
-                </Typography>
+                <Box sx={{ mb: 6, textAlign: 'center' }}>
+                    <Typography 
+                        variant="h3" 
+                        sx={{ 
+                            mb: 2,
+                            fontWeight: 800,
+                            background: isDark
+                                ? 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)'
+                                : 'linear-gradient(135deg, #0891b2 0%, #2563eb 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                        }}
+                    >
+                        Live Analysis
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                        Real-time object detection and analysis from your cameras
+                    </Typography>
+                </Box>
 
-                {/* Model Selection Buttons */}
-                <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
-                    <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {/* Model Selection */}
+                <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                         {Object.entries(modelInfo).map(([key, info]) => (
                             <motion.div
                                 key={key}
@@ -383,20 +429,26 @@ const LiveAnalysis = () => {
                                     modelColor={info.color}
                                 >
                                     <Box sx={{ 
-                                        color: selectedModel === key ? 'inherit' : info.color,
+                                        color: selectedModel === key ? 'white' : info.color,
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center'
+                                        justifyContent: 'center',
+                                        mb: 0.5,
                                     }}>
-                                        {info.icon}
+                                        {React.cloneElement(info.icon, { 
+                                            size: 28,
+                                            weight: selectedModel === key ? 'fill' : 'duotone'
+                                        })}
                                     </Box>
-                                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                                    <Typography variant="body1" sx={{ 
+                                        fontSize: '0.95rem',
+                                        fontWeight: selectedModel === key ? 600 : 500,
+                                    }}>
                                         {info.title}
                                     </Typography>
                                 </ModelButton>
                             </motion.div>
                         ))}
-                    </Box>
                 </Box>
 
                 {/* Control Buttons */}
@@ -406,34 +458,68 @@ const LiveAnalysis = () => {
                     gap: 2,
                     mb: 4
                 }}>
-                    <NeonButton
+                    <ModernButton
                         disabled={cameras.some(camera => camera.isStreaming)}
                         onClick={startWebcamStream}
-                        startIcon={<PlayArrow />}
+                        startIcon={<Play size={20} weight="bold" />}
                         size="large"
                     >
-                        Start Analysis
-                    </NeonButton>
-                    <NeonButton
+                        Start All Cameras
+                    </ModernButton>
+                    <ModernButton
+                        variant="stop"
                         disabled={!cameras.some(camera => camera.isStreaming)}
                         onClick={stopWebcamStream}
-                        startIcon={<Stop />}
+                        startIcon={<Pause size={20} weight="bold" />}
                         size="large"
-                        sx={{
-                            backgroundColor: '#d32f2f',
-                            '&:hover': {
-                                backgroundColor: '#c62828',
-                            }
-                        }}
                     >
                         Stop All
-                    </NeonButton>
+                    </ModernButton>
                 </Box>
 
 
                 {/* Camera Grid */}
                 <Grid container spacing={3} sx={{ minHeight: '600px' }}>
-                    {cameras.map((camera) => (
+                    {cameras.length === 0 ? (
+                        <Grid item xs={12}>
+                            <Paper sx={{
+                                p: 8,
+                                textAlign: 'center',
+                                background: isDark
+                                    ? alpha(theme.palette.background.paper, 0.03)
+                                    : 'rgba(255, 255, 255, 0.7)',
+                                backdropFilter: 'blur(20px)',
+                                border: `1px solid ${alpha(theme.palette.divider, isDark ? 0.08 : 0.12)}`,
+                                borderRadius: 3,
+                            }}>
+                                <Camera size={64} color="#06b6d4" weight="duotone" />
+                                <Typography variant="h5" sx={{ mt: 3, mb: 2, fontWeight: 600 }}>
+                                    No Cameras Found
+                                </Typography>
+                                <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                                    Add cameras in the settings to start live analysis
+                                </Typography>
+                                <Button
+                                    variant="contained"
+                                    onClick={() => window.location.href = '/settings'}
+                                    startIcon={<Camera size={20} />}
+                                    sx={{
+                                        background: isDark
+                                            ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
+                                            : 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                                        borderRadius: 2,
+                                        px: 4,
+                                        py: 1.5,
+                                        textTransform: 'none',
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    Go to Settings
+                                </Button>
+                            </Paper>
+                        </Grid>
+                    ) : (
+                    cameras.map((camera) => (
                         <Grid item xs={12} md={6} key={camera.id}>
                             <VideoContainer sx={{ height: '400px' }}>
                                 {camera.isStreaming ? (
@@ -458,31 +544,39 @@ const LiveAnalysis = () => {
                                                 transition={{ duration: 0.3 }}
                                             />
                                             
-                                            {/* Camera name overlay - top left */}
+                                            {/* Camera info overlay - top */}
                                             <Box sx={{
                                                 position: 'absolute',
-                                                top: 16,
-                                                left: 16,
-                                                padding: '8px 16px',
-                                                borderRadius: '50px',
-                                                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                                backdropFilter: 'blur(4px)',
-                                                transition: 'opacity 0.3s',
-                                                opacity: 0.8,
-                                                '&:hover': {
-                                                    opacity: 1
-                                                }
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                padding: 2,
+                                                background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
                                             }}>
-                                                <Typography sx={{
-                                                    color: 'rgba(255, 255, 255, 0.9)',
-                                                    fontSize: '0.95rem',
-                                                    fontWeight: 500,
-                                                    fontFamily: '"Plus Jakarta Sans", "Inter", -apple-system, sans-serif',
-                                                    letterSpacing: '-0.02em',
-                                                    textTransform: 'capitalize'
-                                                }}>
-                                                    {camera.source_name || `Camera ${camera.id}`}
-                                                </Typography>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Camera size={20} color="#06b6d4" weight="duotone" />
+                                                    <Typography sx={{
+                                                        color: 'white',
+                                                        fontSize: '1rem',
+                                                        fontWeight: 600,
+                                                        textTransform: 'capitalize'
+                                                    }}>
+                                                        {camera.source_name || `Camera ${camera.id}`}
+                                                    </Typography>
+                                                </Box>
+                                                <Chip
+                                                    label={modelInfo[selectedModel].title}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: alpha(modelInfo[selectedModel].color, 0.2),
+                                                        color: 'white',
+                                                        border: `1px solid ${alpha(modelInfo[selectedModel].color, 0.5)}`,
+                                                        fontWeight: 500,
+                                                    }}
+                                                />
                                             </Box>
                                             
                                             {/* Bottom left corner stop button */}
@@ -496,31 +590,22 @@ const LiveAnalysis = () => {
                                                     opacity: 1
                                                 }
                                             }}>
-                                                <Button
-                                                    variant="contained"
-                                                    color="error"
+                                                <IconButton
                                                     onClick={() => stopSingleCamera(camera.id)}
                                                     size="small"
-                                                    startIcon={<Stop sx={{ fontSize: '1rem' }} />}
                                                     sx={{
-                                                        minWidth: 'auto',
-                                                        py: 0.5,
-                                                        px: 1.5,
-                                                        borderRadius: '50px',
-                                                        backgroundColor: 'rgba(220, 53, 69, 0.9)',
-                                                        backdropFilter: 'blur(4px)',
-                                                        fontSize: '0.85rem',
-                                                        textTransform: 'none',
-                                                        boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
+                                                        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+                                                        backdropFilter: 'blur(8px)',
+                                                        color: 'white',
                                                         '&:hover': {
-                                                            backgroundColor: 'rgba(201, 42, 58, 0.95)',
-                                                            boxShadow: '0 6px 16px rgba(220, 53, 69, 0.4)',
-                                                            transform: 'translateY(-1px)'
-                                                        }
+                                                            backgroundColor: 'rgba(220, 38, 38, 0.95)',
+                                                            transform: 'scale(1.1)'
+                                                        },
+                                                        transition: 'all 0.2s ease',
                                                     }}
                                                 >
-                                                    Stop
-                                                </Button>
+                                                    <Pause size={16} weight="bold" />
+                                                </IconButton>
                                             </Box>
                                         </Box>
                                     </>
@@ -535,54 +620,22 @@ const LiveAnalysis = () => {
                                         p: 4,
                                         textAlign: 'center'
                                     }}>
-                                        <Typography variant="h6" sx={{ 
-                                            color: theme => theme.palette.mode === 'dark' 
-                                                ? 'rgba(255, 255, 255, 0.7)'
-                                                : '#1a237e',
-                                            fontSize: '2rem',
-                                            fontWeight: 700,
-                                            mb: 2,
-                                            fontFamily: '"Plus Jakarta Sans", "Inter", -apple-system, sans-serif',
-                                            letterSpacing: '-0.04em',
-                                            position: 'relative',
-                                            display: 'inline-block',
-                                            '&::after': {
-                                                content: '""',
-                                                position: 'absolute',
-                                                bottom: '-8px',
-                                                left: '50%',
-                                                transform: 'translateX(-50%)',
-                                                width: '40px',
-                                                height: '3px',
-                                                background: theme => theme.palette.mode === 'dark' 
-                                                    ? 'linear-gradient(90deg, #6366f1, #8b5cf6)'
-                                                    : 'linear-gradient(90deg, #4f46e5, #6366f1)',
-                                                borderRadius: '2px',
-                                                transition: 'width 0.3s ease',
-                                            },
-                                            '&:hover::after': {
-                                                width: '60px',
-                                            },
-                                            textTransform: 'capitalize',
-                                            textShadow: theme => theme.palette.mode === 'dark' 
-                                                ? '0 2px 10px rgba(99, 102, 241, 0.2)' 
-                                                : 'none',
-                                            '&:hover': {
-                                                background: theme => theme.palette.mode === 'dark'
-                                                    ? 'linear-gradient(90deg, #6366f1, #8b5cf6)'
-                                                    : 'linear-gradient(90deg, #4f46e5, #6366f1)',
-                                                WebkitBackgroundClip: 'text',
-                                                WebkitTextFillColor: 'transparent',
-                                            }
-                                        }}>
-                                            {(camera.source_name || `Camera ${camera.id}`).toLowerCase()}
-                                        </Typography>
-                                        <NeonButton
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                                            <Camera size={40} color="#06b6d4" weight="duotone" />
+                                            <Typography variant="h5" sx={{ 
+                                                color: isDark ? 'rgba(255, 255, 255, 0.9)' : theme.palette.text.primary,
+                                                fontWeight: 700,
+                                                textTransform: 'capitalize',
+                                            }}>
+                                                {camera.source_name || `Camera ${camera.id}`}
+                                            </Typography>
+                                        </Box>
+                                        <ModernButton
                                             onClick={() => startSingleCamera(camera.id)}
-                                            startIcon={<PlayArrow />}
+                                            startIcon={<Play size={20} weight="bold" />}
                                         >
                                             Start Stream
-                                        </NeonButton>
+                                        </ModernButton>
                                         <Typography variant="body2" color="text.secondary" sx={{ 
                                             maxWidth: '80%',
                                             mt: 2,
@@ -594,7 +647,7 @@ const LiveAnalysis = () => {
                                 )}
                             </VideoContainer>
                         </Grid>
-                    ))}
+                    )))}
                 </Grid>
             </motion.div>
         </StyledContainer>
