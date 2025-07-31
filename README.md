@@ -1,3 +1,11 @@
+
+<img width="1704" height="898" alt="Screenshot 2025-07-31 at 13 29 08" src="https://github.com/user-attachments/assets/543be458-81d6-45d6-82cb-fd751d31135f" />
+<img width="1706" height="896" alt="Screenshot 2025-07-31 at 13 29 21" src="https://github.com/user-attachments/assets/8b1667a0-608b-4879-9088-0ebf25aafb48" />
+<img width="1660" height="894" alt="Screenshot 2025-07-31 at 13 29 32" src="https://github.com/user-attachments/assets/891e0f84-02d7-4822-ac8a-282f8a2805d5" />
+<img width="1695" height="634" alt="Screenshot 2025-07-31 at 13 29 44" src="https://github.com/user-attachments/assets/fa873c08-1e13-4fbd-acec-f382b84f4a17" />
+<img width="1651" height="634" alt="Screenshot 2025-07-31 at 13 29 53" src="https://github.com/user-attachments/assets/79dc17c5-d545-45f8-ab5a-af72b0bf4179" />
+
+
 # AI Vision System
 
 A real-time AI vision processing system with camera management, object detection, and monitoring capabilities.
