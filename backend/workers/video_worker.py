@@ -10,14 +10,14 @@ from backend.db_settings import SessionLocal
 from backend.monitoring.metrics import metrics
 
 
-def run_video_job(job_id: str, file_path: str, model, model_task: str, camera_id: int | None):
+def run_video_job(job_id: str, file_path: str, adapter, model_task: str, camera_id: int | None):
     """
-    Liest ein Videofile wie einen Stream, verarbeitet Frames mit deinem process_frame
-    und speichert Events. Metriken:
-      - active_video_jobs: (DEKREMENT hier bei natürlichem Ende)
+    Liest ein Videofile wie einen Stream, nutzt das generische ModelAdapter-Interface.
+    Metriken:
       - video_frames_processed_total{job_id}
       - video_frame_latency_seconds{job_id, model_type}
       - video_job_errors_total{job_id}
+      - active_video_jobs: wird hier am Ende dekrementiert
     """
     cap = cv2.VideoCapture(file_path)
     if not cap.isOpened():
@@ -37,25 +37,22 @@ def run_video_job(job_id: str, file_path: str, model, model_task: str, camera_id
 
             t0 = perf_counter()
             try:
-                # Inferenz
-                results = model(frame)
-
-                # Annotieren + Events sammeln
+                # Generische Inferenz über Adapter
+                res = adapter.predict(frame)  # liefert InferenceResult
                 events = []
-                for out in process_frame(frame, results[0], camera_id or -1, model_task):
+
+                # Frame verarbeiten (res.raw ist provider-spezifisch; bei YOLO results[0])
+                for out in process_frame(frame, res.raw, camera_id or -1, model_task):
                     if "class_name" in out:
                         events.append(out["class_name"])
                     elif "frame" in out:
-                        # Aktuelles annotiertes Frame bereitstellen
                         ok_jpg, buf = cv2.imencode(".jpg", out["frame"])
                         if ok_jpg:
                             set_latest(job_id, buf.tobytes())
 
-                # Metriken für dieses Frame
+                # Metriken
                 metrics.video_frames_processed.labels(job_id=job_id).inc()
-                metrics.video_frame_latency.labels(
-                    job_id=job_id, model_type=model_task
-                ).observe(perf_counter() - t0)
+                metrics.video_frame_latency.labels(job_id=job_id, model_type=model_task).observe(perf_counter() - t0)
 
                 # Events persistieren (gleich wie Live)
                 if events:
@@ -68,24 +65,20 @@ def run_video_job(job_id: str, file_path: str, model, model_task: str, camera_id
                         db.close()
 
             except Exception as e:
-                # Fehler im Frame-Handling
                 set_error(job_id, str(e))
                 metrics.video_job_errors.labels(job_id=job_id).inc()
 
-            # Fortschritt (falls FrameCount bekannt)
             idx += 1
             if total > 0:
                 set_progress(job_id, 100.0 * idx / total)
 
-        # Ende erreicht → auf 100% setzen
         set_progress(job_id, 100.0)
 
     except Exception as e:
-        # Unerwarteter Fehler außerhalb des Frame-Loops
         set_error(job_id, str(e))
         metrics.video_job_errors.labels(job_id=job_id).inc()
 
     finally:
         cap.release()
         video_running[job_id] = False
-        metrics.active_video_jobs.dec()
+        metrics.active_video_jobs.dec()  # nur hier dec!
