@@ -10,8 +10,8 @@ class ModelTask(str, Enum):
     pose = "pose"            # Pose-Estimation
     classify = "classify"    # Bildklassifikation
     track = "track"          # Objekt-Tracking
-    depth    = "depth"     # neu
-    normals  = "normal"
+    depth    = "depth"     
+    normals  = "normals"
     custom = "custom"        # Für spätere Spezialfälle
 
 
