@@ -9,6 +9,30 @@ class MetricsManager:
             'camera_streams_active',
             'Number of currently active camera streams'
         )
+
+        # Video Analysis Metrics
+        self.active_video_jobs = Gauge(
+            'video_jobs_active',
+            'Number of currently active video analysis jobs'
+        )
+
+        self.video_frames_processed = Counter(
+            'video_frames_processed_total',
+            'Total number of video frames processed',
+            ['job_id']
+        )
+
+        self.video_job_errors = Counter(
+            'video_job_errors_total',
+            'Total number of video job errors',
+            ['job_id']
+        )
+
+        self.video_frame_latency = Histogram(
+            'video_frame_latency_seconds',
+            'Latency to process a single video frame',
+            ['job_id', 'model_type']
+        )
         
         self.frame_processing_time = Histogram(
             'frame_processing_duration_seconds',

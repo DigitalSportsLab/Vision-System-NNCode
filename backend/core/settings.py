@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     YOLO_SEG: str = "yolov8n-seg.pt"
     YOLO_POSE: str = "yolov8n-pose.pt"
 
+    UPLOADS_DIR: str = "data/uploads"
+
     class Config:
         env_file = ".env"
 
