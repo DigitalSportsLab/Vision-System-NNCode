@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+from datetime import datetime, timezone
 
 Base = declarative_base()
 
@@ -9,7 +9,7 @@ class DetectionEvent(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     model_type = Column(String, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     class_name = Column(String)
     camera_id = Column(Integer, index=True)
     camera_name = Column(String)

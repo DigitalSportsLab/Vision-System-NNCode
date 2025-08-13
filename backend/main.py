@@ -6,6 +6,7 @@ from backend.core.settings import settings
 from backend.core.logging import setup_logging
 from backend.db_settings import init_db
 from backend.routers import cameras, streams, frames, stats, admin, videos
+from backend.routers import detections as detections_router
 
 app = FastAPI()
 setup_logging()
@@ -26,6 +27,7 @@ app.include_router(frames.router, tags=["frames"])
 app.include_router(stats.router, prefix="/api/detection-stats", tags=["stats"])
 app.include_router(admin.router, prefix="/api", tags=["admin"])
 app.include_router(videos.router, prefix="/api", tags=["videos"])
+app.include_router(detections_router.router, prefix="/api", tags=["detections"])
 
 @app.on_event("startup")
 async def startup():

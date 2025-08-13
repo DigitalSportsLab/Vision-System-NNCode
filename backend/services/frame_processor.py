@@ -48,24 +48,22 @@ def process_frame(frame, result, camera_id: int, model_task: str):
                 cls_id = int(box.cls[0]); conf = float(box.conf[0])
                 class_name = result.names[cls_id]
 
-                # zeichnen für alle bekannten Klassen, sonst Standardfarbe
                 color = DETECTION_COLORS.get(class_name, (200,200,200))
                 cv2.rectangle(annotated,(int(x1),int(y1)),(int(x2),int(y2)),color,2)
                 label = f"{class_name} {conf:.2f}"
-                cv2.putText(annotated,label,(int(x1), max(int(y1)-6, 12)),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2)
+                cv2.putText(annotated,label,(int(x1), max(int(y1)-6, 12)),
+                            cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2)
 
-                valid = (class_name=="person") or (class_name=="bottle" and model_task=="detect")
-                if valid:
-                    # Metriken pro Box (Bugfix gegenüber Original)
-                    metrics.record_detection(str(camera_id), class_name, model_task, conf)
+                # 🔧 Debug: alles zulassen (später wieder einschränken)
+                metrics.record_detection(str(camera_id), class_name, model_task, conf)
 
-                    now = datetime.now()
-                    last = detection_times[camera_id][class_name]
-                    if last == datetime.min:
-                        detection_times[camera_id][class_name] = now
-                    elif now - last >= timedelta(seconds=10):
-                        yield {"class_name": class_name}
-                        detection_times[camera_id][class_name] = datetime.min
+                now = datetime.now()
+                last = detection_times[camera_id][class_name]
+
+                # 🔧 erstes Event sofort, danach alle 2s (Throttle)
+                if last == datetime.min or (now - last) >= timedelta(seconds=2):
+                    yield {"class_name": class_name}
+                    detection_times[camera_id][class_name] = now
 
         cv2.putText(annotated, f"{frame.shape[1]}x{frame.shape[0]}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 2)
         yield {"frame": annotated}
