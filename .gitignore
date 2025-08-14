@@ -155,3 +155,6 @@ prometheus/data/
 .directory
 .Trash-*
 .nfs*
+
+# Models 
+*.pt
