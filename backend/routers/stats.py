@@ -227,3 +227,21 @@ async def get_hourly_pattern(days: int = 30):
         return hourly_pattern
     finally:
         db.close()
+
+@router.get("/summary")
+async def stats_summary():
+    """Aggregierte Kennzahlen für das Dashboard (Alias für 'summary')."""
+    db = SessionLocal()
+    try:
+        total = db.query(func.count(DetectionEvent.id)).scalar() or 0
+        obj   = db.query(func.count(DetectionEvent.id)).filter(DetectionEvent.model_type == "objectDetection").scalar() or 0
+        seg   = db.query(func.count(DetectionEvent.id)).filter(DetectionEvent.model_type == "segmentation").scalar() or 0
+        pose  = db.query(func.count(DetectionEvent.id)).filter(DetectionEvent.model_type == "pose").scalar() or 0
+        return {
+            "totalDetections":     total,
+            "objectDetections":    obj,
+            "segmentations":       seg,
+            "poseEstimations":     pose,
+        }
+    finally:
+        db.close()

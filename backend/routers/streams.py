@@ -14,6 +14,21 @@ router = APIRouter()
 class ModelRequest(BaseModel):
     model_type: str   # z.B. objectDetection | segmentation | pose | classification
 
+def _resolve_stream_src(cam):
+    """
+    Liefert die richtige Quelle für OpenCV:
+    - live:   int(Device-Index), z.B. "0" -> 0
+    - andere: String (RTSP/HTTP/Datei) bleibt String
+    """
+    st = (cam.stream_type or "").lower()
+    if st == "live":
+        try:
+            return int(str(cam.stream).strip())
+        except Exception:
+            return 0  # Fallback, falls DB-Wert leer/ungültig
+    return cam.stream
+
+
 @router.post("/start_camera_stream/{camera_id}")
 def start_camera_stream(camera_id: int, req: ModelRequest):
     """Startet einen Live-Stream für eine einzelne Kamera (Registry → YOLO-Fallback)."""
@@ -45,9 +60,10 @@ def start_camera_stream(camera_id: int, req: ModelRequest):
     metrics.active_cameras.inc()
 
     # Thread starten – wichtig: cam.stream verwenden
+    src = _resolve_stream_src(cam)
     t = threading.Thread(
         target=run_camera_loop,
-        args=(camera_id, cam.stream, adapter, adapter.task.value, f"🎥 {cam.source_name}"),
+        args=(camera_id, src, adapter, adapter.task.value, f"🎥 {cam.source_name}"),
         daemon=True
     )
     t.start()
@@ -94,9 +110,10 @@ def start_all_live_cameras(req: ModelRequest):
         camera_running[cam.id] = True
         metrics.active_cameras.inc()
 
+        src = _resolve_stream_src(cam)
         t = threading.Thread(
             target=run_camera_loop,
-            args=(cam.id, cam.stream, adapter, adapter.task.value, f"🎥 {cam.source_name}"),
+            args=(cam.id, src, adapter, adapter.task.value, f"🎥 {cam.source_name}"),
             daemon=True
         )
         t.start()

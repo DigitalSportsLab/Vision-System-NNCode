@@ -42,7 +42,7 @@ const Detections = () => {
   const fetchDetections = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/detections', {
+      const response = await axios.get('http://localhost:8000/api/detection', {
         params: {
           limit: 100,
           offset: 0
