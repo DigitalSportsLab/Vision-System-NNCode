@@ -52,14 +52,28 @@ docker-compose up
 
 *The backend will automatically create the database on first run*
 
-### 3. Start Backend (New Terminal)
+### 3. Run Database Migrations (Alembic)
+
+Apply all migrations to create the schema:
+```bash
+alembic upgrade head
+```
+
+After model changes, generate a new migration and apply:
+```bash
+alembic revision -m "describe change" --autogenerate
+alembic upgrade head
+```
+
+
+### 4. Start Backend (New Terminal)
 
 ```bash
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 uvicorn backend.main:app --reload
 ```
 
-### 4. Start Frontend (New Terminal)
+### 5. Start Frontend (New Terminal)
 
 ```bash
 cd frontend
@@ -67,7 +81,7 @@ npm install
 npm run dev
 ```
 
-### 5. Access Application
+### 6. Access Application
 
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8000
@@ -77,13 +91,22 @@ npm run dev
 
 ```
 .
-├── backend/          # FastAPI backend
-├── frontend/         # React + Vite frontend  
-├── prometheus/       # Monitoring configuration
-├── docker-compose.yml
-├── requirements.txt  # Python dependencies
-├── .env.example     # Environment variables template
+├── backend/             # FastAPI backend
+│   ├── main.py          # API entrypoint
+│   ├── models.py        # SQLAlchemy models
+│   └── ...
+├── frontend/            # React + Vite frontend
+├── migrations/          # Alembic migration files
+│   ├── env.py
+│   ├── versions/
+│   └── ...
+├── prometheus/          # Monitoring configuration
+├── docker-compose.yml   # Docker services (DB, Grafana, Prometheus, etc.)
+├── requirements.txt     # Python dependencies
+├── alembic.ini          # Alembic configuration
+├── .env.example         # Environment variables template
 └── README.md
+
 ```
 
 ## Troubleshooting
