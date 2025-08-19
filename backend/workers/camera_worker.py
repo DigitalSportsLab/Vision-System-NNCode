@@ -6,6 +6,7 @@ from backend.services.ingestion.video import VideoSource
 from backend.services.inference.dummy import DummyInference
 from backend.services.tracking.naive import NaiveTracker
 from backend.services.storage import DbSink
+from backend.services.live_ws import WebSocketSink
 
 class CameraWorker:
     def __init__(self, stream_url: str, session_id: int, fps_target: int = 25):
@@ -16,7 +17,7 @@ class CameraWorker:
             source=VideoSource(stream_url),
             inference=DummyInference(),
             tracker=NaiveTracker(),
-            sinks=[DbSink(batch_size=64)]
+            sinks=[DbSink(batch_size=64), WebSocketSink()]
         )
         self._stop = False
 
